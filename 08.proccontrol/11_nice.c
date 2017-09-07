@@ -1,13 +1,17 @@
 #include <errno.h>
 #include <limits.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
 #include <unistd.h>
 
-long long count;
+long long count = 0;
 struct timeval end;
 static void check_time(const char* str);
+static void* thread_entry(void* s);
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+#define THREAD_NUM 8
 
 int main(int argc, char* argv[])
 {
@@ -44,13 +48,14 @@ int main(int argc, char* argv[])
         s = "parent";
         printf("parent nice:%d\n", nice(0) + nzero);
     }
-    while (1) {
-        if (++count == 0) {
-            printf("count overflow\n");
-            return -1;
-        }
-        check_time(s);
+    int i;
+    pthread_t thread_array[THREAD_NUM];
+    for (i = 0; i < THREAD_NUM; ++i) {
+        pthread_create(&thread_array[i], NULL, thread_entry, NULL);
     }
+    for (i = 0; i < THREAD_NUM; ++i)
+        pthread_join(thread_array[i], NULL);
+    printf("%s:%d count:%lld\n", s, getpid(), count);
     return 0;
 }
 
@@ -59,7 +64,23 @@ static void check_time(const char* str)
     struct timeval tv;
     gettimeofday(&tv, NULL);
     if (tv.tv_sec >= end.tv_sec && tv.tv_usec >= end.tv_usec) {
-        printf("%s count:%lld\n", str, count);
-        exit(0);
+        // printf("%s count:%lld\n", str, count);
+        pthread_exit((void*)0);
+    }
+}
+
+static void* thread_entry(void* s)
+{
+    // printf("enter thread_entry\n");
+    while (1) {
+        pthread_mutex_lock(&mutex);
+        ++count;
+        if (count == 0) {
+            pthread_mutex_unlock(&mutex);
+            printf("count overflow\n");
+            return NULL;
+        }
+        pthread_mutex_unlock(&mutex);
+        check_time((char*)s);
     }
 }
