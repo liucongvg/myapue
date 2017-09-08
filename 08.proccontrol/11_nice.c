@@ -6,7 +6,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-long long count = 0;
+// long long count = 0;
 struct timeval end;
 static void check_time(const char* str);
 static void* thread_entry(void* s);
@@ -50,12 +50,16 @@ int main(int argc, char* argv[])
     }
     int i;
     pthread_t thread_array[THREAD_NUM];
+    long long sum[THREAD_NUM] = { 0 };
     for (i = 0; i < THREAD_NUM; ++i) {
-        pthread_create(&thread_array[i], NULL, thread_entry, NULL);
+        pthread_create(&thread_array[i], NULL, thread_entry, &sum[i]);
     }
-    for (i = 0; i < THREAD_NUM; ++i)
+    long long total = 0;
+    for (i = 0; i < THREAD_NUM; ++i) {
         pthread_join(thread_array[i], NULL);
-    printf("%s:%d count:%lld\n", s, getpid(), count);
+        total += sum[i];
+    }
+    printf("%s:%d total:%lld\n", s, getpid(), total);
     return 0;
 }
 
@@ -73,14 +77,15 @@ static void* thread_entry(void* s)
 {
     // printf("enter thread_entry\n");
     while (1) {
-        pthread_mutex_lock(&mutex);
-        ++count;
-        if (count == 0) {
-            pthread_mutex_unlock(&mutex);
-            printf("count overflow\n");
+        // pthread_mutex_lock(&mutex);
+        long long* sum = (long long*)s;
+        *sum += 1;
+        if (*sum == 0) {
+            // pthread_mutex_unlock(&mutex);
+            printf("sum overflow\n");
             return NULL;
         }
-        pthread_mutex_unlock(&mutex);
-        check_time((char*)s);
+        // pthread_mutex_unlock(&mutex);
+        check_time(NULL);
     }
 }
