@@ -9,22 +9,29 @@
 
 static void sig_usr1(int signo);
 static void sig_alarm(int signo);
-// should not use signal unsafe method in signal handler, remember!
+// Calling async-signal-unsafe function in prin_mask will cause segment fault
+// If I change prin_mask from macro to function, segment fault won't happen, so, all
+// in all, do not call async-signal-unsafe function in signal handler no matter if it will
+// have race condition or not
 #define prin_mask(signo)                                                                                               \
     do {                                                                                                               \
         sigset_t current_mask;                                                                                         \
         if (sigprocmask(SIG_BLOCK, NULL, &current_mask) < 0) {                                                         \
-            perror("sigprocmask error");                                                                               \
+            const char* error_message = "sigprocmask error\n";                                                         \
+            write(STDOUT_FILENO, error_message, strlen(error_message));                                                \
             exit(-1);                                                                                                  \
         }                                                                                                              \
         int res;                                                                                                       \
         if ((res = sigismember(&current_mask, signo)) < 0) {                                                           \
-            perror("sigismember error");                                                                               \
+            const char* error_message = "sigismember error\n";                                                         \
+            write(STDOUT_FILENO, error_message, strlen(error_message));                                                \
             exit(-1);                                                                                                  \
         } else if (res == 1) {                                                                                         \
-            printf("%s is a member of current proc mask\n", #signo);                                                   \
+            const char* prin_message = #signo " is a member of current proc mask\n";                                   \
+            write(STDOUT_FILENO, prin_message, strlen(prin_message));                                                  \
         } else {                                                                                                       \
-            printf("%s is not a member of current proc mask\n" #signo);                                                \
+            const char* prin_message = #signo " is a not member of current proc mask\n";                               \
+            write(STDOUT_FILENO, prin_message, strlen(prin_message));                                                  \
         }                                                                                                              \
     } while (0)
 
@@ -50,6 +57,7 @@ int main(int argc, char* argv[])
         prin_mask(SIGALRM);
         prin_mask(SIGUSR1);
         printf("sigsetjmp, exit now\n");
+        exit(0);
     }
     canjump = 1;
     while (1) {

@@ -9,7 +9,8 @@
 
 static void sig_usr1(int signo);
 static void sig_alarm(int signo);
-// should not use signal unsafe method in signal handler, remember!
+// should not use signal unsafe method in signal handler
+// this code sample is just for debug
 void prin_mask(int signo, const char* str)
 {
     sigset_t current_mask;
