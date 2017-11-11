@@ -1,5 +1,6 @@
 #include <fcntl.h>
 #include <signal.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/resource.h>
@@ -9,9 +10,34 @@
 #include <syslog.h>
 #include <unistd.h>
 
+#define LOCK_FILE "/home/liucong/01_daemonize@liucong"
+#define LOCK_MODE (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
+
+int already_running(void)
+{
+    int fd = open(LOCK_FILE, O_RDWR | O_CREAT, LOCK_MODE);
+    if (fd < 0)
+        return -1;
+    if (lockf(fd, F_TLOCK, 0) < 0) {
+        close(fd);
+        exit(-1);
+    }
+    ftruncate(fd, 0);
+    char buffer[16] = { 0 };
+    sprintf(buffer, "%d", getpid());
+    write(fd, buffer, strlen(buffer));
+    return 0;
+}
+
 void daemonize(const char* cmd)
 {
     umask(0);
+
+    struct sigaction action;
+    memset(&action, 0, sizeof(action));
+    action.sa_handler = SIG_IGN;
+    sigemptyset(&action.sa_mask);
+    sigaction(SIGHUP, &action, NULL);
 
     pid_t pid;
     if ((pid = fork()) < 0)
@@ -20,12 +46,6 @@ void daemonize(const char* cmd)
         exit(0);
 
     setsid();
-
-    struct sigaction action;
-    memset(&action, 0, sizeof(action));
-    action.sa_handler = SIG_IGN;
-    sigemptyset(&action.sa_mask);
-    sigaction(SIGHUP, &action, NULL);
 
     chdir("/");
 
@@ -45,6 +65,8 @@ void daemonize(const char* cmd)
         syslog(LOG_ERR, "fd error");
         exit(-1);
     }
+    if (already_running() < 0)
+        exit(-1);
     pause();
     return;
 }
