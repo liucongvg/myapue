@@ -6,7 +6,7 @@ debug:
 	@echo $(targets)
 
 %:%.c
-	gcc -o $@ $^ 
+	gcc -o $@ $^ -pthread 
 
 .PHONY: clean
 
