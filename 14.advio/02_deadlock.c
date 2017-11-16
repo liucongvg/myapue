@@ -32,6 +32,7 @@ int main(int argc, char* argv[])
         lock_a_byte("parent", fd, 1);
         tell_child(pid);
         wait_child();
+        sleep(1);
         lock_a_byte("parent", fd, 0);
     }
     return 0;
@@ -51,11 +52,20 @@ static void lock_a_byte(const char* name, int fd, int offset)
     } else
         printf("%s hold lock, offset:%d\n", name, offset);
 }
-
-void sig_usr1(int sig_nu) { printf("sig_usr1\n"); }
-struct sigaction action;
+static volatile sig_atomic_t flag;
+static void sig_usr1(int sig_nu)
+{
+    flag = 1;
+    printf("sig_usr1\n");
+}
+static struct sigaction action;
+static sigset_t old_set;
 static void tell_wait()
 {
+    sigset_t new_set;
+    sigemptyset(&new_set);
+    sigaddset(&new_set, SIGUSR1);
+    sigprocmask(SIG_BLOCK, &new_set, &old_set);
     action.sa_handler = sig_usr1;
     sigemptyset(&action.sa_mask);
     sigaction(SIGUSR1, &action, NULL);
@@ -64,7 +74,9 @@ static void wait()
 {
     sigset_t set;
     sigemptyset(&set);
-    sigsuspend(&set);
+    while (!flag)
+        sigsuspend(&set);
+    sigprocmask(SIG_SETMASK, &old_set, NULL);
 }
 static void wait_parent()
 {
