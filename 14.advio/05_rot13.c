@@ -42,6 +42,7 @@ int main(int argc, char* argv[])
     int offset = 0;
     int res;
     int num_to_process = 0;
+    int n;
     while (1) {
         for (i = 0; i < NBUF; ++i) {
             switch (wraps[i].op) {
@@ -61,7 +62,65 @@ int main(int argc, char* argv[])
                 }
                 aio_list[i] = &wraps[i].aiocb;
                 ++num_to_process;
+                break;
+            case READ_PENDING:
+                if ((res = aio_error(&wraps[i].aiocb)) == EINPROGRESS)
+                    continue;
+                if (res != 0) {
+                    printf("aio_error\n");
+                    exit(-1);
+                }
+                if ((n = aio_return(&wraps[i].aiocb)) < 0) {
+                    printf("error aio_return\n");
+                    exit(-1);
+                }
+                if (n != BSZ && !wraps[i].last) {
+                    printf("error read count\n");
+                    exit(-1);
+                }
+                // int j;
+                // for (j = 0; j < n; ++j)
+                //    wraps[i].data[j] = translate(wraps[i].data[j]);
+                wraps[i].op = WRITE_PENDING;
+                wraps[i].aiocb.aio_fildes = out_fd;
+                wraps[i].aiocb.aio_nbytes = n;
+                if (aio_write(&wraps[i].aiocb) < 0) {
+                    perror("aio_write");
+                    exit(-1);
+                }
+                break;
+            case WRITE_PENDING:
+                if ((res = aio_error(&wraps[i].aiocb)) == EINPROGRESS)
+                    continue;
+                if (res != 0) {
+                    printf("aio_error error\n");
+                    exit(-1);
+                }
+                int n;
+                if ((n = aio_return(&wraps[i].aiocb)) < 0) {
+                    printf("aio_return error\n");
+                    exit(-1);
+                }
+                if (n != wraps[i].aiocb.aio_nbytes) {
+                    printf("short write\n");
+                    exit(-1);
+                }
+                aio_list[i] = NULL;
+                wraps[i].op = UNUSED;
+                --num_to_process;
+                break;
+            }
+        }
+        if (num_to_process == 0) {
+            if (offset >= statbuf.st_size)
+                break;
+        } else {
+            if (aio_suspend(aio_list, NBUF, NULL) < 0) {
+                perror("aio_suspend");
             }
         }
     }
+    wraps[0].aiocb.aio_fildes = out_fd;
+    aio_fsync(O_SYNC, &wraps[0].aiocb);
+    exit(0);
 }
