@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
     memset(wraps, 0, sizeof(wraps));
     int i;
     const struct aiocb* aio_list[NBUF];
-    for (i = 0; i < BSZ; ++i) {
+    for (i = 0; i < NBUF; ++i) {
         wraps[i].op = UNUSED;
         wraps[i].aiocb.aio_buf = wraps[i].data;
         wraps[i].aiocb.aio_sigevent.sigev_notify = SIGEV_NONE;
