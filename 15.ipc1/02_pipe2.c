@@ -8,10 +8,11 @@
 
 int main(int argc, char* argv[])
 {
-    int fd[2];
-    pid_t pid;
     if (argc != 2)
         return -1;
+    int fd[2];
+    pipe(fd);
+    pid_t pid;
     printf("argv[1]:%s\n", argv[1]);
     FILE* stream = fopen(argv[1], "r");
     if (!stream) {
@@ -26,20 +27,23 @@ int main(int argc, char* argv[])
         char line[MAXLINE];
         printf("begin to get\n");
         while (fgets(line, MAXLINE, stream)) {
-            write(fd[1], line, strlen(line));
             // printf("write:%s", line);
+            write(fd[1], line, strlen(line));
         }
         if (ferror(stream)) {
             perror("fgets error");
         }
-        printf("\n");
         close(fd[1]);
         int status;
         waitpid(pid, &status, 0);
         return 0;
     } else {
         close(fd[1]);
-        dup2(fd[0], STDIN_FILENO);
-        execl("/bin/more", "more", NULL);
+        if (dup2(fd[0], STDIN_FILENO) != STDIN_FILENO) {
+            perror("dup2 error");
+        }
+        if (execl("/bin/more", "more", NULL) < 0) {
+            perror("execl error");
+        }
     }
 }
