@@ -42,6 +42,11 @@ int main(int argc, char* argv[])
         if (dup2(fd[0], STDIN_FILENO) != STDIN_FILENO) {
             perror("dup2 error");
         }
+        /*
+         * 此处more是如何实现的，直接在终端中敲more，more并没有阻塞，而是输出了一段东西
+         * 这就说明more不是通过读标准输入来阻塞自己，一旦有数据进来就处理并显示的，那么
+         * more是如何实现的呢？为什么这里有数据重定向到more的标准输入它就会自动按page输出呢？
+         */
         if (execl("/bin/more", "more", NULL) < 0) {
             perror("execl error");
         }
