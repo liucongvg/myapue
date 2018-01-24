@@ -6,7 +6,7 @@
 #include <sys/types.h>
 
 #define PATHNAME "/tmp/liucong_svmsg"
-#define PROJ_ID 0
+#define PROJ_ID 2
 
 int main(int argc, char* argv[])
 {
