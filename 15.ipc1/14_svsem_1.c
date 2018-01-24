@@ -23,29 +23,27 @@ int main(int argc, char* argv[])
         perror("semget");
         return -1;
     }
-    union semun {
-        int val;               /* Value for SETVAL */
-        struct semid_ds* buf;  /* Buffer for IPC_STAT, IPC_SET */
-        unsigned short* array; /* Array for GETALL, SETALL */
-        struct seminfo* __buf; /* Buffer for IPC_INFO
-                                  (Linux-specific) */
-    };
-    union semun to_set;
-    struct semid_ds sds;
-    semctl(sem_id, 0, IPC_STAT, to_set);
-    printf("to_set.buf->sem_nsems:%ld\n", to_set.buf->sem_nsems);
+    // initialize semaphore to 1
     struct sembuf sop;
-    sop.sem_op = -1;
+    sop.sem_op = 1;
     sop.sem_num = 0;
     sop.sem_flg = SEM_UNDO;
     if (semop(sem_id, &sop, 1) < 0) {
         perror("semop");
         return -1;
     }
-    struct tm* tm = localtime(NULL);
-
+    sop.sem_op = -1;
+    if (semop(sem_id, &sop, 1) < 0) {
+        perror("semop");
+        return -1;
+    }
+    time_t count = time(NULL);
+    struct tm* tm = localtime(&count);
     printf("%d:%d:%d running...\n", tm->tm_hour, tm->tm_min, tm->tm_sec);
-    sleep(5);
+    // you can start another program here
+    sleep(10);
+    count = time(NULL);
+    tm = localtime(&count);
     printf("%d:%d:%d end...\n", tm->tm_hour, tm->tm_min, tm->tm_sec);
     sop.sem_op = 1;
     if (semop(sem_id, &sop, 1) < 0) {

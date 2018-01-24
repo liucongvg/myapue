@@ -4,6 +4,7 @@
 #include <sys/ipc.h>
 #include <sys/sem.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 
 #define PATHNAME "/tmp/liucong_svsem"
@@ -29,4 +30,13 @@ int main(int argc, char* argv[])
         perror("semop");
         return -1;
     }
+    time_t count = time(NULL);
+    struct tm* tm = localtime(&count);
+    printf("%d:%d:%d run\n", tm->tm_hour, tm->tm_min, tm->tm_sec);
+    sop.sem_op = 1;
+    if (semop(sem_id, &sop, 1) < 0) {
+        perror("semop");
+        return -1;
+    }
+    return 0;
 }
