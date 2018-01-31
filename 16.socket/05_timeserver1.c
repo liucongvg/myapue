@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
             return -1;
         }
         struct sockaddr addr;
-        socklen_t len;
+        socklen_t len = sizeof(struct sockaddr_in); // you must initialize len, not just socklen_t len;!!!
         int new_fd = accept(fd, &addr, &len);
         if (new_fd < 0) {
             perror("accept");
@@ -74,7 +74,8 @@ int main(int argc, char* argv[])
     } else {
         char tempbuf[100] = { 0 };
         struct sockaddr addr;
-        socklen_t len = sizeof(addr); // NOTE: you must initialize the len value!!!! not just socklen_t len;
+        socklen_t len
+            = sizeof(struct sockaddr_in); // NOTE: you must initialize the len value!!!! not just socklen_t len;
         ssize_t n = recvfrom(fd, tempbuf, 100, 0, &addr, &len);
         printf("host:%s\n", inet_ntoa(((struct sockaddr_in*)&addr)->sin_addr));
         printf("host:%d\n", ntohs(((struct sockaddr_in*)&addr)->sin_port));
@@ -82,7 +83,7 @@ int main(int argc, char* argv[])
         // printf("recv form client:%s\n", tempbuf);
         FILE* stream = popen("/usr/bin/uptime", "r");
         fgets(return_buf, MAXLINE, stream);
-        if (sendto(fd, return_buf, strlen(return_buf), 0, &addr, sizeof(addr)) < 0) {
+        if (sendto(fd, return_buf, strlen(return_buf), 0, &addr, len) < 0) {
             perror("sendto");
             close(fd);
             return -1;
