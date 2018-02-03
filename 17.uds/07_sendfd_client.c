@@ -2,12 +2,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
 
 #define SERVER_NAME "liucong.sendfd.server"
-#define CLIENT_NAME "liucong.sendfd.client"
 #define OFFSET_OF(TYPE, MEMBER) ((unsigned int)&((TYPE*)0)->MEMBER)
 
 int main(int argc, char* argv[])
@@ -43,8 +43,9 @@ int main(int argc, char* argv[])
     int file_fd = *(int*)CMSG_DATA(r_chdr);
     printf("file_fd:%d\n", file_fd);
 #define MAXLINE 4096
+    lseek(file_fd, 0, SEEK_SET); // as you can see below, the current position of file pointer is at the end.!!!
     char buffer[MAXLINE];
-    int count = read(fd, buffer, MAXLINE);
+    int count = read(file_fd, buffer, MAXLINE);
     if (n < 0) {
         perror("read");
         return -1;
@@ -53,5 +54,8 @@ int main(int argc, char* argv[])
     }
     buffer[count] = 0;
     printf("file content:%s\n", buffer);
+    struct stat buffer_stat;
+    fstat(file_fd, &buffer_stat);
+    printf("size of file:%ld\n", buffer_stat.st_size);
     return 0;
 }

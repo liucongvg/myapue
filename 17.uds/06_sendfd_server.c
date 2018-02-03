@@ -10,6 +10,7 @@
 #define BACKLOG 3
 #define SERVER_NAME "liucong.sendfd.server"
 #define FILE_NAME "sendfd_file"
+#define FILE_CONTNET "liucong..."
 
 int main(int argc, char* argv[])
 {
@@ -38,16 +39,20 @@ int main(int argc, char* argv[])
         perror("accept");
         return -1;
     }
-    int file_fd = open(FILE_NAME, O_RDONLY);
+    int file_fd = open(FILE_NAME, O_CREAT | O_RDWR | O_TRUNC | O_SYNC, S_IRWXU | S_IRWXG | S_IRWXO);
     if (file_fd < 0) {
         perror("open");
+        return -1;
+    }
+    if (write(file_fd, FILE_CONTNET, strlen(FILE_CONTNET)) != strlen(FILE_CONTNET)) {
+        perror("write");
         return -1;
     }
     struct msghdr hdr;
     memset(&hdr, 0, sizeof(hdr));
     struct iovec msg;
-    // msg.iov_len = 0;
-    // msg.iov_base = NULL;
+    msg.iov_len = 0;
+    msg.iov_base = NULL;
     struct cmsghdr chdr;
     chdr.cmsg_type = SCM_RIGHTS;
     chdr.cmsg_level = SOL_SOCKET;
@@ -55,7 +60,6 @@ int main(int argc, char* argv[])
     *(int*)CMSG_DATA(&chdr) = file_fd;
     hdr.msg_control = &chdr;
     hdr.msg_controllen = CMSG_LEN(sizeof(int));
-    //hdr.msg_controllen = CMSG_SPACE(sizeof(int));
     hdr.msg_iov = &msg;
     hdr.msg_iovlen = 0;
     hdr.msg_name = NULL;
@@ -63,6 +67,7 @@ int main(int argc, char* argv[])
     int n;
 #define MAXLINE 4096
     char buffer[MAXLINE];
+    lseek(file_fd, 0, SEEK_SET);
     int count = read(file_fd, buffer, MAXLINE);
     if (count < 0) {
         perror("read");
