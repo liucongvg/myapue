@@ -9,7 +9,7 @@
 
 int main(int argc, char* argv[])
 {
-    int fd = socket(AF_UNIX, SOCK_DGRAM, 0);
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) {
         perror("socket");
         return -1;
